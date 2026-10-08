@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from flask import has_request_context, request
 
+from .db import get_db
 
 GENESIS = "0" * 64
 seclog = logging.getLogger("cims.security")
@@ -30,6 +31,18 @@ def record(db, actor_id, action, target, details=""):
         "INSERT INTO audit_log (ts, actor_id, action, target, details, prev_hash, hash) VALUES (?,?,?,?,?,?,?)",
         (ts, actor_id, action, target, details, prev, _digest(prev, ts, actor_id, action, target, details)),
     )
+
+
+def verify_chain():
+    """Returns (ok, first_bad_id). Detects edited, inserted or deleted rows in the middle.
+    ponytail: tail truncation is only caught if the head hash is anchored externally (see Phase 16)."""
+    prev = GENESIS
+    for r in get_db().execute("SELECT * FROM audit_log ORDER BY id"):
+        expected = _digest(prev, r["ts"], r["actor_id"], r["action"], r["target"], r["details"])
+        if r["prev_hash"] != prev or r["hash"] != expected:
+            return False, r["id"]
+        prev = r["hash"]
+    return True, None
 
 
 def security_event(event, level=logging.INFO, **fields):

@@ -227,3 +227,17 @@ def test_en23_no_privilege_escalation(app, login):
     assert adm.post(f"/admin/users/{app.ids['analyst']}/role", json={"role": "ROOT"}).status_code == 400
     assert adm.post(f"/admin/users/{app.ids['analyst']}/role", json={"role": "REPORTER"}).status_code == 200
     assert ana.get("/me").json["role"] == "REPORTER"  # demotion applies to the live session at once
+
+
+# EN-24 SR-05 Hash-chained append-only audit log
+def test_en24_audit_chain(app, incident):
+    incident("RESOLVED")
+    with app.app_context():
+        db = get_db()
+        for sql in ("UPDATE audit_log SET details = 'x'", "DELETE FROM audit_log"):
+            with pytest.raises(sqlite3.IntegrityError):
+                db.execute(sql)
+        assert audit.verify_chain() == (True, None)
+        db.execute("DROP TRIGGER audit_no_update")  # simulate someone editing the DB file directly
+        db.execute("UPDATE audit_log SET details = 'forged' WHERE id = 3")
+        assert audit.verify_chain() == (False, 3)

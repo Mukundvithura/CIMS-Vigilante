@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 
 -- Immutability: evidence, notes and audit rows can never be edited or deleted through the DB.
+CREATE TRIGGER IF NOT EXISTS audit_no_update    BEFORE UPDATE ON audit_log BEGIN SELECT RAISE(ABORT, 'audit_log is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS audit_no_delete    BEFORE DELETE ON audit_log BEGIN SELECT RAISE(ABORT, 'audit_log is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS evidence_no_update BEFORE UPDATE ON evidence  BEGIN SELECT RAISE(ABORT, 'evidence is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS evidence_no_delete BEFORE DELETE ON evidence  BEGIN SELECT RAISE(ABORT, 'evidence is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS notes_no_update    BEFORE UPDATE ON notes     BEGIN SELECT RAISE(ABORT, 'notes are immutable'); END;
