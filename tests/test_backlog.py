@@ -188,3 +188,15 @@ def test_en20_evidence_upload(app, login, incident):
     assert upload(login("analyst"), iid, b"x" * (5 * 1024 * 1024 + 1), "big.bin").status_code == 413
     with app.app_context(), pytest.raises(sqlite3.IntegrityError):
         get_db().execute("UPDATE evidence SET sha256 = 'forged'")  # evidence rows are immutable
+
+
+# EN-21 FR-09 Verify evidence still matches its hash
+def test_en21_verify_evidence(app, login, incident):
+    iid = incident("INVESTIGATING")
+    ana = login("analyst")
+    eid = upload(ana, iid, b"pcap bytes", "c2.pcap").json["id"]
+    assert ana.get(f"/evidence/{eid}/verify").json["intact"] is True
+    next(Path(app.config["EVIDENCE_DIR"]).iterdir()).write_bytes(b"tampered")
+    r = ana.get(f"/evidence/{eid}/verify").json
+    assert r["intact"] is False and r["actual_sha256"] == hashlib.sha256(b"tampered").hexdigest()
+    assert login("analyst2").get(f"/evidence/{eid}/verify").status_code == 404  # same need-to-know as the incident

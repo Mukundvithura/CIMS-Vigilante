@@ -98,3 +98,9 @@ def add_note(incident_id):
 def add_evidence(incident_id):
     evidence_id, digest = evidence.add(incident_id, request.files.get("file"))
     return {"id": evidence_id, "sha256": digest}, 201
+
+
+@bp.get("/evidence/<int:evidence_id>/verify")
+@role_required(*STAFF)
+def verify_evidence(evidence_id):
+    return evidence.verify(evidence_id)
