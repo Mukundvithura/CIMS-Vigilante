@@ -1,0 +1,60 @@
+# CI pipeline for CIMS: checkout -> install -> tests -> security checks -> image build and package.
+# Runs on every push and pull request to main. A failed step blocks the merge once branch protection requires it.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install pinned dependencies and tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock pytest bandit pip-audit
+
+      - name: Unit, integration, system and fuzz tests
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python -m pytest -q
+
+      - name: Static security analysis (bandit)
+        run: python -m bandit -r app -q
+
+      - name: Dependency vulnerability audit (pip-audit)
+        run: python -m pip_audit -r requirements.lock
+
+  package:
+    needs: test-and-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build container image
+        run: docker build -t cims:${{ github.sha }} .
+
+      - name: Save image as a build artifact
+        run: docker save cims:${{ github.sha }} | gzip > cims-image.tar.gz
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cims-image
+          path: cims-image.tar.gz
+          retention-days: 7

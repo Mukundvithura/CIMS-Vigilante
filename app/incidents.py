@@ -94,7 +94,7 @@ def list_visible():
 
 
 def classify(incident_id, severity):
-    if severity not in SEVERITIES:
+    if not isinstance(severity, str) or severity not in SEVERITIES:
         raise ServiceError(400, "severity must be one of LOW, MEDIUM, HIGH, CRITICAL")
     with transaction() as db:
         inc = _load(db, incident_id)
@@ -122,6 +122,8 @@ def assign(incident_id, assignee_id):
 def update_status(incident_id, new_status, reason=None):
     with transaction() as db:
         inc = _load(db, incident_id)
+        if not isinstance(new_status, str):
+            raise ServiceError(400, "status must be text")
         allowed = TRANSITIONS.get((inc["status"], new_status))
         if allowed is None:
             raise ServiceError(409, f"cannot move from {inc['status']} to {new_status}")
