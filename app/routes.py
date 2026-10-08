@@ -1,9 +1,9 @@
 """HTTP layer only: parse input, call a service, return JSON. Business rules live in the services."""
 
-from flask import Blueprint, request, session
+from flask import Blueprint, g, request, session
 
 from . import auth
-from .auth import ServiceError
+from .auth import ServiceError, role_required
 
 bp = Blueprint("api", __name__)
 
@@ -13,6 +13,12 @@ def body():
     if not isinstance(data, dict):
         raise ServiceError(400, "JSON object body required")
     return data
+
+
+@bp.get("/me")
+@role_required()
+def me():
+    return {"id": g.user["id"], "username": g.user["username"], "role": g.user["role"]}
 
 
 @bp.post("/login")

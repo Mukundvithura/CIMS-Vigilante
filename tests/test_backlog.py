@@ -40,3 +40,13 @@ def test_en8_lockout_and_timeout(app):
     r = app.test_client().post("/login", json={"username": "analyst", "password": PW})
     assert "Expires=" in r.headers["Set-Cookie"]
     assert app.permanent_session_lifetime.total_seconds() == 1800
+
+
+# EN-9 SR-02 Role check on every request
+def test_en9_role_checked_every_request(app, login):
+    assert app.test_client().get("/me").status_code == 401
+    c = login("analyst")
+    assert c.get("/me").json["role"] == "ANALYST"
+    with app.app_context():
+        get_db().execute("UPDATE users SET locked = 1 WHERE id = ?", (app.ids["analyst"],))
+    assert c.get("/me").status_code == 401  # user re-read from the DB on every request

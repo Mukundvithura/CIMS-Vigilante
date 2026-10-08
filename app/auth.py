@@ -1,7 +1,8 @@
 """Authentication + role-based authorization (SR-01, SR-02, SR-06)."""
 import logging
+from functools import wraps
 
-from flask import g
+from flask import abort, g, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import audit
@@ -60,3 +61,24 @@ def authenticate(username, password):
         audit.record(db, user["id"], "LOGIN_OK", f"user:{user['id']}")
         audit.security_event("LOGIN_OK", user=username)
         return user
+
+
+def role_required(*roles):
+    """Loads the user from the DB on every request, so a role change or lock applies immediately."""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            uid = session.get("uid")
+            user = uid and get_db().execute("SELECT id, username, role, locked FROM users WHERE id = ?", (uid,)).fetchone()
+            if not user or user["locked"]:
+                session.clear()
+                abort(401)
+            if roles and user["role"] not in roles:
+                with transaction() as db:
+                    audit.record(db, user["id"], "ACCESS_DENIED", fn.__name__, f"role={user['role']}")
+                audit.security_event("ACCESS_DENIED", logging.WARNING, user=user["username"], endpoint=fn.__name__)
+                abort(403)
+            g.user = user
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
