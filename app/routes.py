@@ -54,3 +54,10 @@ def report_incident():
 @role_required("REPORTER", *STAFF)
 def get_incident(incident_id):
     return incidents.get(incident_id)
+
+
+@bp.post("/incidents/<int:incident_id>/classify")
+@role_required(*STAFF)
+def classify(incident_id):
+    incidents.classify(incident_id, body().get("severity"))
+    return {"status": "TRIAGED"}

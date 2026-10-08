@@ -82,3 +82,13 @@ def test_en11_report_incident(login):
     assert inc["status"] == "NEW" and inc["severity"] is None
     assert c.post("/incidents", json={"title": " ", "description": "x"}).status_code == 400
     assert c.post("/incidents", json={"title": "x" * 201, "description": "x"}).status_code == 400
+
+
+# EN-12 FR-02 Classify incident severity
+def test_en12_classify(login, incident):
+    iid = incident("NEW")
+    assert login("reporter").post(f"/incidents/{iid}/classify", json={"severity": "LOW"}).status_code == 403
+    assert login("analyst").post(f"/incidents/{iid}/classify", json={"severity": "SEVERE"}).status_code == 400
+    assert login("analyst").post(f"/incidents/{iid}/classify", json={"severity": "CRITICAL"}).status_code == 200
+    inc = login("manager").get(f"/incidents/{iid}").json
+    assert inc["status"] == "TRIAGED" and inc["severity"] == "CRITICAL"

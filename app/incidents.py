@@ -5,6 +5,7 @@ from . import audit
 from .auth import ServiceError
 from .db import get_db, transaction
 
+SEVERITIES = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
 TITLE_MAX, TEXT_MAX = 200, 5000
 
 
@@ -57,3 +58,15 @@ def get(incident_id):
     db = get_db()
     inc = dict(_load(db, incident_id))
     return inc
+
+
+def classify(incident_id, severity):
+    if severity not in SEVERITIES:
+        raise ServiceError(400, "severity must be one of LOW, MEDIUM, HIGH, CRITICAL")
+    with transaction() as db:
+        inc = _load(db, incident_id)
+        if inc["status"] not in ("NEW", "TRIAGED"):
+            raise ServiceError(409, "severity can only be set before assignment")
+        db.execute("UPDATE incidents SET severity = ?, status = 'TRIAGED', updated_at = ? WHERE id = ?",
+                   (severity, audit.now(), incident_id))
+        audit.record(db, g.user["id"], "SEVERITY_SET", f"incident:{incident_id}", f"{inc['severity']}->{severity}")
