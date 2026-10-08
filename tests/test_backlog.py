@@ -217,3 +217,13 @@ def test_en22_admin_users(app, login):
         c.post("/login", json={"username": "reporter2", "password": "wrong-password!"})
     assert adm.post(f"/admin/users/{app.ids['reporter2']}/unlock").status_code == 200
     login("reporter2")  # can sign in again
+
+
+# EN-23 SR-06 Prevent privilege escalation
+def test_en23_no_privilege_escalation(app, login):
+    adm, ana = login("admin"), login("analyst")
+    assert adm.post(f"/admin/users/{app.ids['admin']}/role", json={"role": "AUDITOR"}).status_code == 403
+    assert ana.post(f"/admin/users/{app.ids['analyst']}/role", json={"role": "ADMIN"}).status_code == 403
+    assert adm.post(f"/admin/users/{app.ids['analyst']}/role", json={"role": "ROOT"}).status_code == 400
+    assert adm.post(f"/admin/users/{app.ids['analyst']}/role", json={"role": "REPORTER"}).status_code == 200
+    assert ana.get("/me").json["role"] == "REPORTER"  # demotion applies to the live session at once

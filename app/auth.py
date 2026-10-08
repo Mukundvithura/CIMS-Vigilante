@@ -85,8 +85,11 @@ def role_required(*roles):
 
 
 def change_role(user_id, new_role):
+    """Privilege-escalation guard (SR-06): only ADMIN, never on their own account."""
     if new_role not in ROLES:
         raise ServiceError(400, "invalid role")
+    if user_id == g.user["id"]:
+        raise ServiceError(403, "administrators cannot change their own role")
     with transaction() as db:
         target = db.execute("SELECT role FROM users WHERE id = ?", (user_id,)).fetchone()
         if target is None:
