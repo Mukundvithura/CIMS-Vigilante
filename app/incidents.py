@@ -8,6 +8,12 @@ from .db import get_db, transaction
 SEVERITIES = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
 TITLE_MAX, TEXT_MAX = 200, 5000
 
+# (from, to) -> roles allowed. Anything not listed is an invalid transition.
+TRANSITIONS = {
+    ("ASSIGNED", "INVESTIGATING"): {"ANALYST"},
+    ("INVESTIGATING", "RESOLVED"): {"ANALYST"},
+}
+
 
 def clean_text(value, field, max_len):
     """Input validation at the trust boundary (SR-07)."""
@@ -98,6 +104,21 @@ def assign(incident_id, assignee_id):
                    (assignee_id, audit.now(), incident_id))
         audit.record(db, g.user["id"], "INCIDENT_ASSIGNED", f"incident:{incident_id}",
                      f"{inc['assignee_id']}->{assignee_id}")
+
+
+def update_status(incident_id, new_status, reason=None):
+    with transaction() as db:
+        inc = _load(db, incident_id)
+        allowed = TRANSITIONS.get((inc["status"], new_status))
+        if allowed is None:
+            raise ServiceError(409, f"cannot move from {inc['status']} to {new_status}")
+        if g.user["role"] not in allowed:
+            raise ServiceError(403, f"{g.user['role']} cannot move an incident to {new_status}")
+        if g.user["role"] == "ANALYST" and inc["assignee_id"] != g.user["id"]:
+            raise ServiceError(403, "only the assigned analyst can do this")
+        details = f"{inc['status']}->{new_status}"
+        db.execute("UPDATE incidents SET status = ?, updated_at = ? WHERE id = ?", (new_status, audit.now(), incident_id))
+        audit.record(db, g.user["id"], "STATUS_CHANGED", f"incident:{incident_id}", details)
 
 
 def add_note(incident_id, note):

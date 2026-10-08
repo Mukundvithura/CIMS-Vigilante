@@ -73,6 +73,14 @@ def assign(incident_id):
     return {"status": "ASSIGNED"}
 
 
+@bp.post("/incidents/<int:incident_id>/status")
+@role_required(*STAFF)
+def update_status(incident_id):
+    data = body()
+    incidents.update_status(incident_id, data.get("status"), data.get("reason"))
+    return {"status": data.get("status")}
+
+
 @bp.post("/incidents/<int:incident_id>/notes")
 @role_required(*STAFF)
 def add_note(incident_id):
