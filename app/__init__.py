@@ -15,6 +15,8 @@ def create_app(test_config=None):
         # Secrets come from the environment / K8s Secret only (SR-09). Never hard-coded.
         SECRET_KEY=os.environ.get("CIMS_SECRET_KEY"),
         DATABASE=os.environ.get("CIMS_DATABASE", "data/cims.db"),
+        EVIDENCE_DIR=os.environ.get("CIMS_EVIDENCE_DIR", "data/evidence"),
+        MAX_CONTENT_LENGTH=6 * 1024 * 1024,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Strict",  # CSRF mitigation for the cookie session
         SESSION_COOKIE_SECURE=os.environ.get("CIMS_COOKIE_SECURE", "1") == "1",
@@ -24,6 +26,7 @@ def create_app(test_config=None):
         app.config.update(test_config)
 
     Path(app.config["DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
+    Path(app.config["EVIDENCE_DIR"]).mkdir(parents=True, exist_ok=True)
 
     sec = logging.getLogger("cims.security")
     if not sec.handlers:

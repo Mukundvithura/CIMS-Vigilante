@@ -173,3 +173,18 @@ def test_en19_input_validation(app, login, incident):
     assert c.post("/login", json={"username": ["admin"], "password": "x"}).status_code == 400
     iid = incident("TRIAGED")
     assert login("manager").post(f"/incidents/{iid}/assign", json={"assignee_id": "3"}).status_code == 400
+
+
+# EN-20 FR-04 Upload evidence with SHA-256 hash
+def test_en20_evidence_upload(app, login, incident):
+    iid = incident("INVESTIGATING")
+    data = b"malicious payload sample"
+    r = upload(login("analyst"), iid, data, "../../etc/passwd")
+    assert r.status_code == 201 and r.json["sha256"] == hashlib.sha256(data).hexdigest()
+    ev = login("manager").get(f"/incidents/{iid}").json["evidence"][0]
+    assert ev["filename"] == "etc_passwd" and ev["sha256"] == r.json["sha256"]
+    stored = list(Path(app.config["EVIDENCE_DIR"]).iterdir())
+    assert len(stored) == 1 and stored[0].name != ev["filename"]  # random name on disk, no path traversal
+    assert upload(login("analyst"), iid, b"x" * (5 * 1024 * 1024 + 1), "big.bin").status_code == 413
+    with app.app_context(), pytest.raises(sqlite3.IntegrityError):
+        get_db().execute("UPDATE evidence SET sha256 = 'forged'")  # evidence rows are immutable

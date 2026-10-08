@@ -82,6 +82,9 @@ def get(incident_id):
     inc = dict(_load(db, incident_id))
     inc["notes"] = [dict(r) for r in db.execute(
         "SELECT id, author_id, note, created_at FROM notes WHERE incident_id = ? ORDER BY id", (incident_id,))]
+    inc["evidence"] = [dict(r) for r in db.execute(
+        "SELECT id, filename, sha256, size, uploaded_by, uploaded_at FROM evidence WHERE incident_id = ? ORDER BY id",
+        (incident_id,))]
     return inc
 
 

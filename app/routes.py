@@ -2,7 +2,7 @@
 
 from flask import Blueprint, g, jsonify, request, session
 
-from . import auth, incidents
+from . import auth, evidence, incidents
 from .auth import ServiceError, role_required
 
 bp = Blueprint("api", __name__)
@@ -91,3 +91,10 @@ def update_status(incident_id):
 @role_required(*STAFF)
 def add_note(incident_id):
     return {"id": incidents.add_note(incident_id, body().get("note"))}, 201
+
+
+@bp.post("/incidents/<int:incident_id>/evidence")
+@role_required(*STAFF)
+def add_evidence(incident_id):
+    evidence_id, digest = evidence.add(incident_id, request.files.get("file"))
+    return {"id": evidence_id, "sha256": digest}, 201
