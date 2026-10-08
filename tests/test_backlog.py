@@ -200,3 +200,20 @@ def test_en21_verify_evidence(app, login, incident):
     r = ana.get(f"/evidence/{eid}/verify").json
     assert r["intact"] is False and r["actual_sha256"] == hashlib.sha256(b"tampered").hexdigest()
     assert login("analyst2").get(f"/evidence/{eid}/verify").status_code == 404  # same need-to-know as the incident
+
+
+# EN-22 FR-11 Create users, set roles, unlock accounts
+def test_en22_admin_users(app, login):
+    adm = login("admin")
+    new_user = {"username": "new.analyst", "password": "long-enough-pass", "role": "ANALYST"}
+    r = adm.post("/admin/users", json=new_user)
+    assert r.status_code == 201
+    assert adm.post("/admin/users", json=new_user).status_code == 409
+    assert adm.post("/admin/users", json={**new_user, "username": "weak", "password": "short"}).status_code == 400
+    assert login("manager").post("/admin/users", json={**new_user, "username": "x.y"}).status_code == 403
+    assert adm.post(f"/admin/users/{r.json['id']}/role", json={"role": "MANAGER"}).status_code == 200
+    c = app.test_client()
+    for _ in range(5):
+        c.post("/login", json={"username": "reporter2", "password": "wrong-password!"})
+    assert adm.post(f"/admin/users/{app.ids['reporter2']}/unlock").status_code == 200
+    login("reporter2")  # can sign in again

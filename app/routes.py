@@ -104,3 +104,24 @@ def add_evidence(incident_id):
 @role_required(*STAFF)
 def verify_evidence(evidence_id):
     return evidence.verify(evidence_id)
+
+
+@bp.post("/admin/users")
+@role_required("ADMIN")
+def create_user():
+    data = body()
+    return {"id": auth.create_user(data.get("username"), data.get("password"), data.get("role"))}, 201
+
+
+@bp.post("/admin/users/<int:user_id>/role")
+@role_required("ADMIN")
+def change_role(user_id):
+    auth.change_role(user_id, body().get("role"))
+    return {"status": "role changed"}
+
+
+@bp.post("/admin/users/<int:user_id>/unlock")
+@role_required("ADMIN")
+def unlock(user_id):
+    auth.unlock_user(user_id)
+    return {"status": "unlocked"}

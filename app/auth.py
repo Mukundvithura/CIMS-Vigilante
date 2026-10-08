@@ -82,3 +82,22 @@ def role_required(*roles):
             return fn(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def change_role(user_id, new_role):
+    if new_role not in ROLES:
+        raise ServiceError(400, "invalid role")
+    with transaction() as db:
+        target = db.execute("SELECT role FROM users WHERE id = ?", (user_id,)).fetchone()
+        if target is None:
+            raise ServiceError(404, "user not found")
+        db.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, user_id))
+        audit.record(db, g.user["id"], "ROLE_CHANGED", f"user:{user_id}", f"{target['role']}->{new_role}")
+    audit.security_event("ROLE_CHANGED", logging.WARNING, by=g.user["username"], target=user_id, role=new_role)
+
+
+def unlock_user(user_id):
+    with transaction() as db:
+        if db.execute("UPDATE users SET locked = 0, failed_logins = 0 WHERE id = ?", (user_id,)).rowcount == 0:
+            raise ServiceError(404, "user not found")
+        audit.record(db, g.user["id"], "ACCOUNT_UNLOCKED", f"user:{user_id}")
