@@ -50,3 +50,24 @@ def test_en9_role_checked_every_request(app, login):
     with app.app_context():
         get_db().execute("UPDATE users SET locked = 1 WHERE id = ?", (app.ids["analyst"],))
     assert c.get("/me").status_code == 401  # user re-read from the DB on every request
+
+
+# EN-10 SR-08 Need-to-know incident visibility
+def insert_incident(app, reporter, status="NEW", assignee=None):
+    with app.app_context():
+        return get_db().execute(
+            "INSERT INTO incidents (title, description, status, reporter_id, assignee_id, created_at, updated_at) "
+            "VALUES ('t', 'd', ?, ?, ?, '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')",
+            (status, app.ids[reporter], app.ids[assignee] if assignee else None)).lastrowid
+
+
+def test_en10_need_to_know(app, login):
+    new = insert_incident(app, "reporter")
+    theirs = insert_incident(app, "reporter", "ASSIGNED", "analyst2")
+    assert login("reporter").get(f"/incidents/{new}").status_code == 200
+    assert login("reporter2").get(f"/incidents/{new}").status_code == 404  # 404 not 403: IDs can't be probed
+    assert login("analyst").get(f"/incidents/{new}").status_code == 200  # untriaged queue is shared
+    assert login("analyst").get(f"/incidents/{theirs}").status_code == 404  # assigned to another analyst
+    assert login("manager").get(f"/incidents/{theirs}").status_code == 200
+    for name in ("admin", "auditor"):
+        assert login(name).get(f"/incidents/{new}").status_code == 403

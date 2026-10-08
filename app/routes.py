@@ -2,10 +2,11 @@
 
 from flask import Blueprint, g, request, session
 
-from . import auth
+from . import auth, incidents
 from .auth import ServiceError, role_required
 
 bp = Blueprint("api", __name__)
+STAFF = ("ANALYST", "MANAGER")
 
 
 def body():
@@ -40,3 +41,9 @@ def login():
 def logout():
     session.clear()
     return {"status": "logged out"}
+
+
+@bp.get("/incidents/<int:incident_id>")
+@role_required("REPORTER", *STAFF)
+def get_incident(incident_id):
+    return incidents.get(incident_id)
