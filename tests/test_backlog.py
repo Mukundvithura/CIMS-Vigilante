@@ -124,3 +124,13 @@ def test_en15_status_workflow(login, incident):
     assert ana.post(f"/incidents/{iid}/status", json={"status": "INVESTIGATING"}).status_code == 200
     assert ana.post(f"/incidents/{iid}/status", json={"status": "RESOLVED"}).status_code == 200
     assert ana.get(f"/incidents/{iid}").json["status"] == "RESOLVED"
+
+
+# EN-16 FR-07 Close an incident with a reason
+def test_en16_close_with_reason(login, incident):
+    iid = incident("RESOLVED")
+    mgr = login("manager")
+    assert login("analyst").post(f"/incidents/{iid}/status", json={"status": "CLOSED", "reason": "done"}).status_code == 403
+    assert mgr.post(f"/incidents/{iid}/status", json={"status": "CLOSED"}).status_code == 400  # reason required
+    assert mgr.post(f"/incidents/{iid}/status", json={"status": "CLOSED", "reason": "Contained"}).status_code == 200
+    assert mgr.post(f"/incidents/{iid}/notes", json={"note": "late"}).status_code == 409  # closed is read-only

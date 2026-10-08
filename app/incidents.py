@@ -12,7 +12,9 @@ TITLE_MAX, TEXT_MAX = 200, 5000
 TRANSITIONS = {
     ("ASSIGNED", "INVESTIGATING"): {"ANALYST"},
     ("INVESTIGATING", "RESOLVED"): {"ANALYST"},
+    ("RESOLVED", "CLOSED"): {"MANAGER"},
 }
+REASON_REQUIRED = {"CLOSED"}
 
 
 def clean_text(value, field, max_len):
@@ -117,6 +119,8 @@ def update_status(incident_id, new_status, reason=None):
         if g.user["role"] == "ANALYST" and inc["assignee_id"] != g.user["id"]:
             raise ServiceError(403, "only the assigned analyst can do this")
         details = f"{inc['status']}->{new_status}"
+        if new_status in REASON_REQUIRED and g.user["role"] == "MANAGER":
+            details += " reason=" + clean_text(reason, "reason", TITLE_MAX)
         db.execute("UPDATE incidents SET status = ?, updated_at = ? WHERE id = ?", (new_status, audit.now(), incident_id))
         audit.record(db, g.user["id"], "STATUS_CHANGED", f"incident:{incident_id}", details)
 
