@@ -313,3 +313,9 @@ def test_en30_two_field_report_form(app):
     assert form.count(b'name="') == 2 and b'name="title"' in form and b'name="description"' in form
     for asset in ("app.js", "vigilante.css", "logo.png", "shield.png"):
         assert c.get(f"/static/{asset}").status_code == 200
+
+
+# EN-31 NFR-04 Keep business rules out of HTTP routes
+def test_en31_no_business_rules_in_routes(app):
+    src = (Path(app.root_path) / "routes.py").read_text()
+    assert "execute(" not in src and "get_db" not in src and "TRANSITIONS" not in src
