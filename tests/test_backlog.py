@@ -302,3 +302,14 @@ def test_en28_list_10k_under_1s(app, login):
 def test_en29_health(app):
     r = app.test_client().get("/health")
     assert r.status_code == 200 and r.json == {"status": "ok"}
+
+
+# EN-30 NFR-03 Two-field incident report form
+def test_en30_two_field_report_form(app):
+    c = app.test_client()
+    page = c.get("/")
+    assert page.status_code == 200
+    form = page.data.split(b'id="report-form"')[1].split(b"</form>")[0]
+    assert form.count(b'name="') == 2 and b'name="title"' in form and b'name="description"' in form
+    for asset in ("app.js", "vigilante.css", "logo.png", "shield.png"):
+        assert c.get(f"/static/{asset}").status_code == 200

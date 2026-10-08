@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vigilante · Security Incident Management</title>
+  <link rel="icon" href="/static/shield.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Michroma&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block">
+  <link rel="stylesheet" href="/static/vigilante.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+
+<!-- Login (UC-12) -->
+<section id="login" class="login" hidden>
+  <div class="login-glow"></div>
+  <form id="login-form" class="login-card" autocomplete="on">
+    <img class="login-logo" src="/static/logo.png" alt="Vigilante - Security Incident Management">
+    <label class="field">
+      <span class="meta">Username</span>
+      <input name="username" maxlength="32" autocomplete="username" required autofocus>
+    </label>
+    <label class="field">
+      <span class="meta">Password</span>
+      <input name="password" type="password" maxlength="128" autocomplete="current-password" required>
+    </label>
+    <p id="login-error" class="form-error" role="alert"></p>
+    <button class="btn btn-primary btn-block" type="submit">
+      <span class="ms" aria-hidden="true">lock_open</span>Sign in
+    </button>
+    <p class="login-foot mono">HttpOnly · SameSite=Strict · 30-min session</p>
+  </form>
+</section>
+
+<!-- App shell -->
+<div id="shell" class="shell" hidden>
+  <aside class="sidebar">
+    <a class="brand" href="#/">
+      <img src="/static/shield.png" alt="">
+      <span class="brand-text">
+        <span class="wordmark">VIGIL<b>A</b>NTE</span>
+        <span class="tagline">Security Incident Mgmt</span>
+      </span>
+    </a>
+    <nav id="nav" class="nav"></nav>
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <span id="user-avatar" class="avatar"></span>
+        <span class="user-meta">
+          <span id="user-name" class="user-name"></span>
+          <span id="user-role" class="mono dim"></span>
+        </span>
+      </div>
+      <button id="logout" class="btn btn-ghost btn-block" type="button"><span class="ms" aria-hidden="true">logout</span>Sign out</button>
+      <div class="status-pill mono"><span class="dot dot-live"></span>System operational <span class="dim">v1.0</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="search">
+        <span class="ms" aria-hidden="true">search</span>
+        <input id="search" type="search" placeholder="Filter incidents by ID, title, status…" maxlength="100">
+      </div>
+      <button id="report-btn" class="btn btn-primary" type="button"><span class="ms" aria-hidden="true">add</span>Report Incident</button>
+    </header>
+    <main id="view" class="view" tabindex="-1"></main>
+  </div>
+</div>
+
+<!-- Report incident (UC-01) -->
+<dialog id="report-dialog" class="modal">
+  <form id="report-form" method="dialog">
+    <div class="modal-head">
+      <h2>Report Incident</h2>
+      <button class="icon-btn" value="cancel" formnovalidate aria-label="Close"><span class="ms" aria-hidden="true">close</span></button>
+    </div>
+    <label class="field">
+      <span class="meta">Title</span>
+      <input name="title" maxlength="200" required placeholder="e.g. Phishing email with macro attachment">
+    </label>
+    <label class="field">
+      <span class="meta">Description</span>
+      <textarea name="description" maxlength="5000" rows="6" required placeholder="What happened, when, which systems are affected…"></textarea>
+    </label>
+    <p class="form-error" role="alert"></p>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn btn-primary" value="submit"><span class="ms" aria-hidden="true">send</span>Submit report</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

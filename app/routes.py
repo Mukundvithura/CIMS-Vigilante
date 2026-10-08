@@ -1,7 +1,7 @@
 """HTTP layer only: parse input, call a service, return JSON. Business rules live in the services."""
 import logging
 
-from flask import Blueprint, g, jsonify, request, session
+from flask import Blueprint, current_app, g, jsonify, request, session
 
 from . import audit, auth, evidence, incidents
 from .auth import ServiceError, role_required
@@ -15,6 +15,11 @@ def body():
     if not isinstance(data, dict):
         raise ServiceError(400, "JSON object body required")
     return data
+
+
+@bp.get("/")
+def index():
+    return current_app.send_static_file("index.html")
 
 
 @bp.get("/health")
