@@ -61,3 +61,13 @@ def get_incident(incident_id):
 def classify(incident_id):
     incidents.classify(incident_id, body().get("severity"))
     return {"status": "TRIAGED"}
+
+
+@bp.post("/incidents/<int:incident_id>/assign")
+@role_required("MANAGER")
+def assign(incident_id):
+    assignee = body().get("assignee_id")
+    if not isinstance(assignee, int):
+        raise ServiceError(400, "assignee_id must be an integer")
+    incidents.assign(incident_id, assignee)
+    return {"status": "ASSIGNED"}

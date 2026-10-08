@@ -92,3 +92,14 @@ def test_en12_classify(login, incident):
     assert login("analyst").post(f"/incidents/{iid}/classify", json={"severity": "CRITICAL"}).status_code == 200
     inc = login("manager").get(f"/incidents/{iid}").json
     assert inc["status"] == "TRIAGED" and inc["severity"] == "CRITICAL"
+
+
+# EN-13 FR-03 Assign incident to an analyst
+def test_en13_assign(app, login, incident):
+    iid = incident("TRIAGED")
+    body = {"assignee_id": app.ids["analyst"]}
+    assert login("analyst").post(f"/incidents/{iid}/assign", json=body).status_code == 403  # managers only
+    assert login("manager").post(f"/incidents/{iid}/assign", json={"assignee_id": app.ids["reporter"]}).status_code == 400
+    assert login("manager").post(f"/incidents/{iid}/assign", json=body).status_code == 200
+    inc = login("analyst").get(f"/incidents/{iid}").json
+    assert inc["status"] == "ASSIGNED" and inc["assignee_id"] == app.ids["analyst"]

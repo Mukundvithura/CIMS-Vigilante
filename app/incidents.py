@@ -70,3 +70,17 @@ def classify(incident_id, severity):
         db.execute("UPDATE incidents SET severity = ?, status = 'TRIAGED', updated_at = ? WHERE id = ?",
                    (severity, audit.now(), incident_id))
         audit.record(db, g.user["id"], "SEVERITY_SET", f"incident:{incident_id}", f"{inc['severity']}->{severity}")
+
+
+def assign(incident_id, assignee_id):
+    with transaction() as db:
+        inc = _load(db, incident_id)
+        if inc["status"] not in ("TRIAGED", "ASSIGNED"):
+            raise ServiceError(409, "incident must be triaged before assignment")
+        analyst = db.execute("SELECT id FROM users WHERE id = ? AND role = 'ANALYST' AND locked = 0", (assignee_id,)).fetchone()
+        if analyst is None:
+            raise ServiceError(400, "assignee must be an active analyst")
+        db.execute("UPDATE incidents SET assignee_id = ?, status = 'ASSIGNED', updated_at = ? WHERE id = ?",
+                   (assignee_id, audit.now(), incident_id))
+        audit.record(db, g.user["id"], "INCIDENT_ASSIGNED", f"incident:{incident_id}",
+                     f"{inc['assignee_id']}->{assignee_id}")
