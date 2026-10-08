@@ -66,8 +66,14 @@ requirements.lock  Pinned runtime versions
 
 ## Report and diagrams
 
-The full exam report (Phases 1 to 11) and the draw.io diagrams are kept outside this repo, on the project owner's desktop.
+The full exam report (all 16 phases) and the draw.io diagrams are kept outside this repo, on the project owner's desktop. Phase notes for 15 and 16 are in `docs/`.
 
 ## Status
 
-Phases 1 to 11 of the exam are done. Remaining: secure coding and refactoring, Docker and Kubernetes, CI/CD and testing, logging and hardening, and the final review.
+All 16 phases of the exam have been written up. See `docs/` for the Phase 15 and 16 notes.
+
+Still open:
+- Live Kubernetes deploy (needs Kubernetes turned on in Docker Desktop).
+- First CI run on GitHub (pipeline is in `.github/workflows/ci.yml`).
+- Planned security controls not yet built: CSRF token, per-IP login throttle, single access policy, chain head export, least-privilege database role, nightly evidence integrity job, TLS at the ingress, SIEM.
+- Evidence storage is not durable on Kubernetes (emptyDir) and there are no backups.
