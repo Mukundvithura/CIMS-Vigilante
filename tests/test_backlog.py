@@ -29,3 +29,14 @@ def test_en7_login(app):
     assert wrong_pw.status_code == no_user.status_code == 401
     assert wrong_pw.json == no_user.json  # same answer, so usernames can't be enumerated
     assert c.post("/logout").status_code == 200
+
+
+# EN-8 SR-04 Session timeout and account lockout
+def test_en8_lockout_and_timeout(app):
+    c = app.test_client()
+    for _ in range(5):
+        assert c.post("/login", json={"username": "reporter", "password": "wrong-password!"}).status_code == 401
+    assert c.post("/login", json={"username": "reporter", "password": PW}).status_code == 401  # locked out
+    r = app.test_client().post("/login", json={"username": "analyst", "password": PW})
+    assert "Expires=" in r.headers["Set-Cookie"]
+    assert app.permanent_session_lifetime.total_seconds() == 1800

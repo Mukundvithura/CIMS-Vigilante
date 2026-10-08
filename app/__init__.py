@@ -18,6 +18,7 @@ def create_app(test_config=None):
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Strict",  # CSRF mitigation for the cookie session
         SESSION_COOKIE_SECURE=os.environ.get("CIMS_COOKIE_SECURE", "1") == "1",
+        PERMANENT_SESSION_LIFETIME=1800,
     )
     if test_config:
         app.config.update(test_config)

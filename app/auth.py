@@ -8,6 +8,7 @@ from . import audit
 from .db import get_db, transaction
 
 ROLES = {"REPORTER", "ANALYST", "MANAGER", "ADMIN", "AUDITOR"}
+MAX_FAILED = 5
 MIN_PASSWORD = 12
 # Compared against when the username doesn't exist, so response time doesn't reveal valid usernames.
 _DUMMY_HASH = generate_password_hash("dummy-password-for-timing")
@@ -44,10 +45,18 @@ def authenticate(username, password):
     with transaction() as db:
         user = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
         ok = check_password_hash(user["password_hash"] if user else _DUMMY_HASH, password)
-        if user is None or not ok:
+        if user is None or user["locked"] or not ok:
+            if user is not None and not user["locked"]:
+                fails = user["failed_logins"] + 1
+                locked = int(fails >= MAX_FAILED)
+                db.execute("UPDATE users SET failed_logins = ?, locked = ? WHERE id = ?", (fails, locked, user["id"]))
+                if locked:
+                    audit.record(db, None, "ACCOUNT_LOCKED", f"user:{user['id']}")
+                    audit.security_event("ACCOUNT_LOCKED", logging.WARNING, user=username)
             audit.record(db, None, "LOGIN_FAILED", f"username:{username}")
             audit.security_event("LOGIN_FAILED", logging.WARNING, user=username)
             return None
+        db.execute("UPDATE users SET failed_logins = 0 WHERE id = ?", (user["id"],))
         audit.record(db, user["id"], "LOGIN_OK", f"user:{user['id']}")
         audit.security_event("LOGIN_OK", user=username)
         return user

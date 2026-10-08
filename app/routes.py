@@ -25,6 +25,7 @@ def login():
     if user is None:
         raise ServiceError(401, "invalid credentials")  # same message for wrong user / wrong password / locked
     session.clear()  # new session on login (session fixation)
+    session.permanent = True  # applies PERMANENT_SESSION_LIFETIME (30 min timeout, SR-04)
     session["uid"] = user["id"]
     return {"id": user["id"], "role": user["role"]}
 
