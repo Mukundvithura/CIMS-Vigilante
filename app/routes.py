@@ -1,6 +1,6 @@
 """HTTP layer only: parse input, call a service, return JSON. Business rules live in the services."""
 
-from flask import Blueprint, g, request, session
+from flask import Blueprint, g, jsonify, request, session
 
 from . import auth, incidents
 from .auth import ServiceError, role_required
@@ -41,6 +41,12 @@ def login():
 def logout():
     session.clear()
     return {"status": "logged out"}
+
+
+@bp.get("/incidents")
+@role_required("REPORTER", *STAFF)
+def list_incidents():
+    return jsonify(incidents.list_visible())
 
 
 @bp.post("/incidents")

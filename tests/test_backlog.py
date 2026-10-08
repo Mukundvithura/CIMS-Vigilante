@@ -134,3 +134,17 @@ def test_en16_close_with_reason(login, incident):
     assert mgr.post(f"/incidents/{iid}/status", json={"status": "CLOSED"}).status_code == 400  # reason required
     assert mgr.post(f"/incidents/{iid}/status", json={"status": "CLOSED", "reason": "Contained"}).status_code == 200
     assert mgr.post(f"/incidents/{iid}/notes", json={"note": "late"}).status_code == 409  # closed is read-only
+
+
+# EN-17 FR-08 View incidents and details
+def test_en17_view_lists(login, incident):
+    mine, other = incident("NEW"), incident("ASSIGNED")  # "other" is assigned to analyst
+
+    def visible(name):
+        return {i["id"] for i in login(name).get("/incidents").json}
+
+    assert {mine, other} <= visible("manager")
+    assert mine in visible("analyst2") and other not in visible("analyst2")
+    assert {mine, other} <= visible("reporter") and not visible("reporter2")
+    detail = login("manager").get(f"/incidents/{other}").json
+    assert {"title", "description", "status", "severity", "notes"} <= detail.keys()

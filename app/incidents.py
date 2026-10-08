@@ -82,6 +82,11 @@ def get(incident_id):
     return inc
 
 
+def list_visible():
+    rows = get_db().execute("SELECT id, title, severity, status, reporter_id, assignee_id, updated_at FROM incidents ORDER BY id DESC")
+    return [dict(r) for r in rows if can_view(g.user, r)]
+
+
 def classify(incident_id, severity):
     if severity not in SEVERITIES:
         raise ServiceError(400, "severity must be one of LOW, MEDIUM, HIGH, CRITICAL")
