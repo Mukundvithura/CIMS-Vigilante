@@ -71,3 +71,9 @@ def assign(incident_id):
         raise ServiceError(400, "assignee_id must be an integer")
     incidents.assign(incident_id, assignee)
     return {"status": "ASSIGNED"}
+
+
+@bp.post("/incidents/<int:incident_id>/notes")
+@role_required(*STAFF)
+def add_note(incident_id):
+    return {"id": incidents.add_note(incident_id, body().get("note"))}, 201

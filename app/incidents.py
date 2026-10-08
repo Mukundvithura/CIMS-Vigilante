@@ -41,6 +41,18 @@ def _load(db, incident_id):
     return inc
 
 
+def require_workable(db, incident_id):
+    """Only the assigned analyst or a manager may add notes/evidence, and never on a CLOSED incident."""
+    inc = _load(db, incident_id)
+    if inc["status"] == "CLOSED":
+        raise ServiceError(409, "closed incidents are read-only")
+    if not (g.user["role"] == "MANAGER" or (g.user["role"] == "ANALYST" and inc["assignee_id"] == g.user["id"])):
+        raise ServiceError(403, "only the assigned analyst or a manager can do this")
+    if inc["status"] in ("NEW", "TRIAGED"):
+        raise ServiceError(409, "incident must be assigned first")
+    return inc
+
+
 def create(title, description):
     title = clean_text(title, "title", TITLE_MAX)
     description = clean_text(description, "description", TEXT_MAX)
@@ -57,6 +69,8 @@ def create(title, description):
 def get(incident_id):
     db = get_db()
     inc = dict(_load(db, incident_id))
+    inc["notes"] = [dict(r) for r in db.execute(
+        "SELECT id, author_id, note, created_at FROM notes WHERE incident_id = ? ORDER BY id", (incident_id,))]
     return inc
 
 
@@ -84,3 +98,13 @@ def assign(incident_id, assignee_id):
                    (assignee_id, audit.now(), incident_id))
         audit.record(db, g.user["id"], "INCIDENT_ASSIGNED", f"incident:{incident_id}",
                      f"{inc['assignee_id']}->{assignee_id}")
+
+
+def add_note(incident_id, note):
+    note = clean_text(note, "note", TEXT_MAX)
+    with transaction() as db:
+        require_workable(db, incident_id)
+        cur = db.execute("INSERT INTO notes (incident_id, author_id, note, created_at) VALUES (?,?,?,?)",
+                         (incident_id, g.user["id"], note, audit.now()))
+        audit.record(db, g.user["id"], "NOTE_ADDED", f"incident:{incident_id}", f"note:{cur.lastrowid}")
+        return cur.lastrowid

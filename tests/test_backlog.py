@@ -103,3 +103,12 @@ def test_en13_assign(app, login, incident):
     assert login("manager").post(f"/incidents/{iid}/assign", json=body).status_code == 200
     inc = login("analyst").get(f"/incidents/{iid}").json
     assert inc["status"] == "ASSIGNED" and inc["assignee_id"] == app.ids["analyst"]
+
+
+# EN-14 FR-05 Record investigation notes
+def test_en14_notes(login, incident):
+    iid = incident("ASSIGNED")
+    assert login("analyst").post(f"/incidents/{iid}/notes", json={"note": "IOC: 185.220.101.4"}).status_code == 201
+    assert login("analyst2").post(f"/incidents/{iid}/notes", json={"note": "x"}).status_code == 404
+    assert login("manager").get(f"/incidents/{iid}").json["notes"][0]["note"] == "IOC: 185.220.101.4"
+    assert login("manager").post(f"/incidents/{incident('NEW')}/notes", json={"note": "x"}).status_code == 409
