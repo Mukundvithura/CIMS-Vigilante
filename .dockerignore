@@ -1,0 +1,14 @@
+.git
+.gitignore
+.pytest_cache
+__pycache__
+**/__pycache__
+data
+*.db
+tests
+docs
+k8s
+*.md
+*.drawio
+requirements.txt
+requirements-dev.txt

@@ -1,0 +1,118 @@
+# CIMS on Kubernetes: namespace, Deployment and Service.
+# Secrets are NOT in this file. Create them first (see k8s/README.md):
+#   kubectl create secret generic cims-secrets -n cims --from-literal=secret-key=... --from-literal=bootstrap-admin-password=...
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cims
+  labels:
+    # Enforce the Kubernetes "restricted" Pod Security Standard on this namespace.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cims
+  namespace: cims
+  labels:
+    app: cims
+spec:
+  # SQLite allows one writer, so run a single replica.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: cims
+  template:
+    metadata:
+      labels:
+        app: cims
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cims
+          image: cims:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: CIMS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cims-secrets
+                  key: secret-key
+            - name: CIMS_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cims-secrets
+                  key: bootstrap-admin-password
+            - name: CIMS_DATABASE
+              value: /app/data/cims.db
+            - name: CIMS_EVIDENCE_DIR
+              value: /app/data/evidence
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cims
+  namespace: cims
+  labels:
+    app: cims
+spec:
+  # Internal only. Reach it with port-forward (kubectl port-forward -n cims svc/cims 8080:80).
+  type: ClusterIP
+  selector:
+    app: cims
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
