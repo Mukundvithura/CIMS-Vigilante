@@ -281,3 +281,18 @@ def test_en27_secrets_from_env(tmp_path, monkeypatch):
     monkeypatch.setenv("CIMS_BOOTSTRAP_ADMIN_PASSWORD", "bootstrap-admin-pass")
     r = create_app(cfg).test_client().post("/login", json={"username": "admin", "password": "bootstrap-admin-pass"})
     assert r.status_code == 200 and r.json["role"] == "ADMIN"  # first admin comes from env, no default password
+
+
+# EN-28 NFR-01 Lists load within 1 second at 10,000 incidents
+def test_en28_list_10k_under_1s(app, login):
+    ts = "2026-01-01T00:00:00+00:00"
+    with app.app_context(), transaction() as db:
+        db.executemany(
+            "INSERT INTO incidents (title, description, status, reporter_id, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            [(f"Incident {n}", "d", "NEW", app.ids["reporter"], ts, ts) for n in range(10_000)])
+    mgr = login("manager")
+    start = time.perf_counter()
+    r = mgr.get("/incidents")
+    elapsed = time.perf_counter() - start
+    assert r.status_code == 200 and len(r.json) == 10_000
+    assert elapsed < 1.0, f"took {elapsed:.2f}s"
