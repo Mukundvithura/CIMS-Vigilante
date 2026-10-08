@@ -13,8 +13,9 @@ TRANSITIONS = {
     ("ASSIGNED", "INVESTIGATING"): {"ANALYST"},
     ("INVESTIGATING", "RESOLVED"): {"ANALYST"},
     ("RESOLVED", "CLOSED"): {"MANAGER"},
+    ("RESOLVED", "INVESTIGATING"): {"MANAGER"},  # reopen
 }
-REASON_REQUIRED = {"CLOSED"}
+REASON_REQUIRED = {"CLOSED", "INVESTIGATING"}
 
 
 def clean_text(value, field, max_len):

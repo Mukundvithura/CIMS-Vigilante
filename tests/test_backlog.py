@@ -148,3 +148,14 @@ def test_en17_view_lists(login, incident):
     assert {mine, other} <= visible("reporter") and not visible("reporter2")
     detail = login("manager").get(f"/incidents/{other}").json
     assert {"title", "description", "status", "severity", "notes"} <= detail.keys()
+
+
+# EN-18 FR-12 Reopen a resolved incident
+def test_en18_reopen(login, incident):
+    iid = incident("RESOLVED")
+    mgr = login("manager")
+    assert login("analyst").post(f"/incidents/{iid}/status", json={"status": "INVESTIGATING"}).status_code == 403
+    assert mgr.post(f"/incidents/{iid}/status", json={"status": "INVESTIGATING"}).status_code == 400  # reason required
+    assert mgr.post(f"/incidents/{iid}/status", json={"status": "INVESTIGATING", "reason": "IOC seen again"}).status_code == 200
+    closed = incident("CLOSED")
+    assert mgr.post(f"/incidents/{closed}/status", json={"status": "INVESTIGATING", "reason": "x"}).status_code == 409
