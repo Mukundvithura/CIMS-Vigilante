@@ -71,3 +71,14 @@ def test_en10_need_to_know(app, login):
     assert login("manager").get(f"/incidents/{theirs}").status_code == 200
     for name in ("admin", "auditor"):
         assert login(name).get(f"/incidents/{new}").status_code == 403
+
+
+# EN-11 FR-01 Report an incident
+def test_en11_report_incident(login):
+    c = login("reporter")
+    r = c.post("/incidents", json={"title": "Lost laptop", "description": "Left in a taxi"})
+    assert r.status_code == 201
+    inc = c.get(f"/incidents/{r.json['id']}").json
+    assert inc["status"] == "NEW" and inc["severity"] is None
+    assert c.post("/incidents", json={"title": " ", "description": "x"}).status_code == 400
+    assert c.post("/incidents", json={"title": "x" * 201, "description": "x"}).status_code == 400

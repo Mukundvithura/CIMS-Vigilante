@@ -43,6 +43,13 @@ def logout():
     return {"status": "logged out"}
 
 
+@bp.post("/incidents")
+@role_required("REPORTER", *STAFF)
+def report_incident():
+    data = body()
+    return {"id": incidents.create(data.get("title"), data.get("description"))}, 201
+
+
 @bp.get("/incidents/<int:incident_id>")
 @role_required("REPORTER", *STAFF)
 def get_incident(incident_id):
