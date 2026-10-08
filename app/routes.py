@@ -17,6 +17,11 @@ def body():
     return data
 
 
+@bp.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @bp.get("/me")
 @role_required()
 def me():

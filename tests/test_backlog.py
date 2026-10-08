@@ -296,3 +296,9 @@ def test_en28_list_10k_under_1s(app, login):
     elapsed = time.perf_counter() - start
     assert r.status_code == 200 and len(r.json) == 10_000
     assert elapsed < 1.0, f"took {elapsed:.2f}s"
+
+
+# EN-29 NFR-02 Automatic restart via /health liveness probe
+def test_en29_health(app):
+    r = app.test_client().get("/health")
+    assert r.status_code == 200 and r.json == {"status": "ok"}
