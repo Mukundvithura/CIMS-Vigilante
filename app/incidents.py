@@ -27,6 +27,8 @@ def clean_text(value, field, max_len):
         raise ServiceError(400, f"{field} is required")
     if len(value) > max_len:
         raise ServiceError(400, f"{field} must be at most {max_len} characters")
+    if any(ord(c) < 32 and c not in "\n\t" for c in value):
+        raise ServiceError(400, f"{field} contains control characters")
     return value
 
 

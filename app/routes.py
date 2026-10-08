@@ -26,7 +26,7 @@ def me():
 def login():
     data = body()
     username, password = data.get("username"), data.get("password")
-    if not username or not password:
+    if not isinstance(username, str) or not isinstance(password, str) or len(username) > 32 or len(password) > 128:
         raise ServiceError(400, "username and password required")
     user = auth.authenticate(username, password)
     if user is None:

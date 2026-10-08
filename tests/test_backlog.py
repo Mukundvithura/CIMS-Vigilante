@@ -159,3 +159,17 @@ def test_en18_reopen(login, incident):
     assert mgr.post(f"/incidents/{iid}/status", json={"status": "INVESTIGATING", "reason": "IOC seen again"}).status_code == 200
     closed = incident("CLOSED")
     assert mgr.post(f"/incidents/{closed}/status", json={"status": "INVESTIGATING", "reason": "x"}).status_code == 409
+
+
+# EN-19 SR-07 Validate all input at the trust boundary
+def test_en19_input_validation(app, login, incident):
+    rep = login("reporter")
+    assert rep.post("/incidents", data="not json", content_type="text/plain").status_code == 400
+    assert rep.post("/incidents", json=["a list"]).status_code == 400
+    assert rep.post("/incidents", json={"title": "bad\x00title", "description": "d"}).status_code == 400
+    assert rep.post("/incidents", json={"title": 123, "description": "d"}).status_code == 400
+    c = app.test_client()
+    assert c.post("/login", json={"username": "a" * 33, "password": "x"}).status_code == 400
+    assert c.post("/login", json={"username": ["admin"], "password": "x"}).status_code == 400
+    iid = incident("TRIAGED")
+    assert login("manager").post(f"/incidents/{iid}/assign", json={"assignee_id": "3"}).status_code == 400
