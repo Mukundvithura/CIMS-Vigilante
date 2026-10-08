@@ -7,7 +7,7 @@
   <link rel="icon" href="/static/shield.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400..800&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Michroma&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block">
   <link rel="stylesheet" href="/static/vigilante.css">
   <script src="/static/app.js" defer></script>
@@ -16,27 +16,23 @@
 
 <!-- Login (UC-12) -->
 <section id="login" class="login" hidden>
-  <div class="login-panel">
+  <div class="login-glow"></div>
+  <form id="login-form" class="login-card" autocomplete="on">
     <img class="login-logo" src="/static/logo.png" alt="Vigilante - Security Incident Management">
-    <p>Every incident is kept as an investigation record. Each action is logged in a hash-chained, append-only audit log, and every exhibit is fingerprinted with SHA-256 when it is filed.</p>
-  </div>
-  <div class="login-side">
-    <form id="login-form" class="login-card" autocomplete="on">
-      <h1>Sign in</h1>
-      <p class="lede">Use your VIGILANTE account.</p>
-      <label class="field">
-        <span class="meta">Username</span>
-        <input name="username" maxlength="32" autocomplete="username" required autofocus>
-      </label>
-      <label class="field">
-        <span class="meta">Password</span>
-        <input name="password" type="password" maxlength="128" autocomplete="current-password" required>
-      </label>
-      <p id="login-error" class="form-error" role="alert"></p>
-      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
-      <p class="login-foot">Accounts lock after 5 failed attempts · Sessions end after 30 minutes</p>
-    </form>
-  </div>
+    <label class="field">
+      <span class="meta">Username</span>
+      <input name="username" maxlength="32" autocomplete="username" required autofocus>
+    </label>
+    <label class="field">
+      <span class="meta">Password</span>
+      <input name="password" type="password" maxlength="128" autocomplete="current-password" required>
+    </label>
+    <p id="login-error" class="form-error" role="alert"></p>
+    <button class="btn btn-primary btn-block" type="submit">
+      <span class="ms" aria-hidden="true">lock_open</span>Sign in
+    </button>
+    <p class="login-foot mono">HttpOnly · SameSite=Strict · 30-min session</p>
+  </form>
 </section>
 
 <!-- App shell -->
@@ -45,7 +41,7 @@
     <a class="brand" href="#/">
       <img src="/static/shield.png" alt="">
       <span class="brand-text">
-        <span class="wordmark">VIGILANTE</span>
+        <span class="wordmark">VIGIL<b>A</b>NTE</span>
         <span class="tagline">Security Incident Mgmt</span>
       </span>
     </a>
@@ -59,6 +55,7 @@
         </span>
       </div>
       <button id="logout" class="btn btn-ghost btn-block" type="button"><span class="ms" aria-hidden="true">logout</span>Sign out</button>
+      <div class="status-pill mono"><span class="dot dot-live"></span>System operational <span class="dim">v1.0</span></div>
     </div>
   </aside>
 
