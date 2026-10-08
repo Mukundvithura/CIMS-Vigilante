@@ -46,4 +46,26 @@ def create_app(test_config=None):
     def service_error(e):
         return jsonify(error=e.message), e.status
 
+    @app.errorhandler(Exception)
+    def unexpected(e):
+        code = getattr(e, "code", 500)
+        if code == 500:
+            app.logger.exception("unhandled error")  # details to the log, never to the client
+            return jsonify(error="internal error"), 500
+        return jsonify(error=getattr(e, "name", "error")), code
+
+    @app.after_request
+    def security_headers(resp):
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        resp.headers["X-Frame-Options"] = "DENY"
+        # Only our own scripts run (no inline JS), so injected markup can't execute. Fonts come from Google.
+        resp.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; "
+            "font-src https://fonts.gstatic.com; img-src 'self'; object-src 'none'; "
+            "base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        )
+        resp.headers["Cache-Control"] = "no-store"  # incident data must not sit in caches
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        return resp
+
     return app

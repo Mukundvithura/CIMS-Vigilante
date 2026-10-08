@@ -251,3 +251,18 @@ def test_en25_view_and_verify_audit(login, incident):
     assert {"LOGIN_OK", "INCIDENT_REPORTED", "SEVERITY_SET", "INCIDENT_ASSIGNED"} <= actions
     assert aud.get("/audit/verify").json == {"intact": True, "first_bad_id": None}
     assert login("manager").get("/audit").status_code == 403
+
+
+# EN-26 SR-10 Safe error responses
+def test_en26_safe_errors(app):
+    @app.get("/boom")
+    def boom():
+        raise RuntimeError("db password=hunter2")
+
+    c = app.test_client()
+    r = c.get("/boom")
+    assert r.status_code == 500 and r.json == {"error": "internal error"} and b"hunter2" not in r.data
+    r = c.get("/no-such-page")
+    assert r.status_code == 404 and r.is_json
+    assert r.headers["X-Frame-Options"] == "DENY" and r.headers["X-Content-Type-Options"] == "nosniff"
+    assert "script-src 'self'" in r.headers["Content-Security-Policy"]
