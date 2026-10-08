@@ -33,6 +33,10 @@ def record(db, actor_id, action, target, details=""):
     )
 
 
+def recent(limit=500):
+    return [dict(r) for r in get_db().execute("SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (limit,))]
+
+
 def verify_chain():
     """Returns (ok, first_bad_id). Detects edited, inserted or deleted rows in the middle.
     ponytail: tail truncation is only caught if the head hash is anchored externally (see Phase 16)."""

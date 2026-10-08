@@ -1,8 +1,9 @@
 """HTTP layer only: parse input, call a service, return JSON. Business rules live in the services."""
+import logging
 
 from flask import Blueprint, g, jsonify, request, session
 
-from . import auth, evidence, incidents
+from . import audit, auth, evidence, incidents
 from .auth import ServiceError, role_required
 
 bp = Blueprint("api", __name__)
@@ -125,3 +126,18 @@ def change_role(user_id):
 def unlock(user_id):
     auth.unlock_user(user_id)
     return {"status": "unlocked"}
+
+
+@bp.get("/audit")
+@role_required("AUDITOR")
+def audit_log():
+    return jsonify(audit.recent())
+
+
+@bp.get("/audit/verify")
+@role_required("AUDITOR")
+def audit_verify():
+    ok, bad_id = audit.verify_chain()
+    if not ok:
+        audit.security_event("AUDIT_CHAIN_BROKEN", logging.CRITICAL, first_bad_id=bad_id, by=g.user["username"])
+    return {"intact": ok, "first_bad_id": bad_id}

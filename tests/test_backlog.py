@@ -241,3 +241,13 @@ def test_en24_audit_chain(app, incident):
         db.execute("DROP TRIGGER audit_no_update")  # simulate someone editing the DB file directly
         db.execute("UPDATE audit_log SET details = 'forged' WHERE id = 3")
         assert audit.verify_chain() == (False, 3)
+
+
+# EN-25 FR-10 View and verify the audit log
+def test_en25_view_and_verify_audit(login, incident):
+    incident("ASSIGNED")
+    aud = login("auditor")
+    actions = {r["action"] for r in aud.get("/audit").json}
+    assert {"LOGIN_OK", "INCIDENT_REPORTED", "SEVERITY_SET", "INCIDENT_ASSIGNED"} <= actions
+    assert aud.get("/audit/verify").json == {"intact": True, "first_bad_id": None}
+    assert login("manager").get("/audit").status_code == 403
