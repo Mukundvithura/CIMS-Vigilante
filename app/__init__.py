@@ -24,6 +24,8 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
+    if not app.config["SECRET_KEY"] or len(app.config["SECRET_KEY"]) < 32:
+        raise RuntimeError("CIMS_SECRET_KEY must be set (32+ chars)")
 
     Path(app.config["DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
     Path(app.config["EVIDENCE_DIR"]).mkdir(parents=True, exist_ok=True)
@@ -41,6 +43,7 @@ def create_app(test_config=None):
 
     with app.app_context():
         db.init_db()
+        _bootstrap_admin()
 
     @app.errorhandler(ServiceError)
     def service_error(e):
@@ -69,3 +72,12 @@ def create_app(test_config=None):
         return resp
 
     return app
+
+
+def _bootstrap_admin():
+    """First admin comes from env (K8s Secret) so no default password ever exists."""
+    from .db import get_db
+    from .auth import create_user
+    password = os.environ.get("CIMS_BOOTSTRAP_ADMIN_PASSWORD")
+    if password and not get_db().execute("SELECT 1 FROM users WHERE role = 'ADMIN'").fetchone():
+        create_user("admin", password, "ADMIN")

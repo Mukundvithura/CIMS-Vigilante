@@ -266,3 +266,18 @@ def test_en26_safe_errors(app):
     assert r.status_code == 404 and r.is_json
     assert r.headers["X-Frame-Options"] == "DENY" and r.headers["X-Content-Type-Options"] == "nosniff"
     assert "script-src 'self'" in r.headers["Content-Security-Policy"]
+
+
+# EN-27 SR-09 Load secrets from environment only
+def test_en27_secrets_from_env(tmp_path, monkeypatch):
+    cfg = {"DATABASE": str(tmp_path / "s.db"), "EVIDENCE_DIR": str(tmp_path / "e")}
+    monkeypatch.delenv("CIMS_SECRET_KEY", raising=False)
+    with pytest.raises(RuntimeError):
+        create_app(cfg)  # no secret -> refuses to start
+    monkeypatch.setenv("CIMS_SECRET_KEY", "short")
+    with pytest.raises(RuntimeError):
+        create_app(cfg)
+    monkeypatch.setenv("CIMS_SECRET_KEY", "s" * 40)
+    monkeypatch.setenv("CIMS_BOOTSTRAP_ADMIN_PASSWORD", "bootstrap-admin-pass")
+    r = create_app(cfg).test_client().post("/login", json={"username": "admin", "password": "bootstrap-admin-pass"})
+    assert r.status_code == 200 and r.json["role"] == "ADMIN"  # first admin comes from env, no default password
